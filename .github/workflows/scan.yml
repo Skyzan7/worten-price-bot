@@ -1,0 +1,52 @@
+# Alternativa 100 % grátis sem servidor: o GitHub corre o scan de 30 em 30 min.
+# Configura em Settings → Secrets → Actions: TELEGRAM_TOKEN e TELEGRAM_CHAT_ID.
+# Nota: o GitHub pode atrasar execuções agendadas alguns minutos em horas de pico.
+name: Scan Worten
+on:
+  schedule:
+    - cron: "*/30 * * * *"
+  workflow_dispatch:
+
+concurrency: worten-scan
+
+permissions:
+  contents: read
+  actions: write   # para o keep-alive abaixo
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements.txt
+
+      # o histórico (SQLite) é guardado em cache entre execuções
+      - uses: actions/cache/restore@v4
+        with:
+          path: data/prices.db
+          key: prices-db-${{ github.run_id }}
+          restore-keys: prices-db-
+
+      - run: python scan_once.py
+        env:
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+
+      # O GitHub desliga workflows agendados após 60 dias sem atividade
+      # no repositório; isto volta a ativá-lo em cada execução.
+      - name: Keep-alive
+        if: always()
+        run: gh api -X PUT repos/${{ github.repository }}/actions/workflows/scan.yml/enable || true
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - uses: actions/cache/save@v4
+        if: always()
+        with:
+          path: data/prices.db
+          key: prices-db-${{ github.run_id }}
