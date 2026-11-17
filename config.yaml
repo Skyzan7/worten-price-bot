@@ -1,0 +1,44 @@
+# ─────────────────────────────────────────────────────────────
+#  Configuração do bot de falhas de preço da Worten
+# ─────────────────────────────────────────────────────────────
+
+# Intervalo entre scans (minutos)
+scan_interval_min: 30
+
+# Páginas a vigiar (pesquisas, categorias ou promoções).
+# Podes também adicionar/remover pelo Telegram com /add e /remove.
+watch_urls:
+  - https://www.worten.pt/promocoes
+  - https://www.worten.pt/search?query=iphone
+  - https://www.worten.pt/search?query=televisao
+  - https://www.worten.pt/search?query=portatil
+  - https://www.worten.pt/search?query=playstation
+
+# Quantas páginas seguir em cada URL (?page=2, ?page=3 ...)
+max_pages_per_url: 2
+
+# Pausa aleatória entre pedidos (segundos) para não sobrecarregar o site
+delay_min_s: 2
+delay_max_s: 4
+
+# ─── Regras de deteção ───────────────────────────────────────
+rules:
+  # 1) Queda face à mediana do histórico do próprio produto
+  drop_vs_history_pct: 40        # alerta se cair ≥ 40 %
+  min_history_points: 3          # nº mínimo de leituras antes de usar esta regra
+
+  # 2) Desconto face ao "preço antigo" mostrado pela Worten
+  drop_vs_old_price_pct: 60      # alerta se o desconto anunciado for ≥ 60 %
+
+  # 3) Preço ridículo: produto que custava ≥ X € aparece abaixo de Y €
+  absurd_if_median_above: 100
+  absurd_price_below: 10
+
+  # Ignorar produtos abaixo deste preço de referência (ruído)
+  min_reference_price: 20
+
+  # Não repetir o mesmo alerta (produto + preço) durante N horas
+  realert_after_hours: 24
+
+# Ficheiro SQLite com o histórico
+db_path: data/prices.db
